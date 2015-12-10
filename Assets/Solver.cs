@@ -225,6 +225,30 @@ public class Solver : MonoBehaviour {
 		//	check for ones which are OFF which NEED to be ON
 		List<Vector2> MustBeOns = new List<Vector2> ();
 		MustBeOns.Add (new Vector2 (3, 3));
+		MustBeOns.Add (new Vector2 (4, 3));
+		MustBeOns.Add (new Vector2 (12, 3));
+		MustBeOns.Add (new Vector2 (13, 3));
+		MustBeOns.Add (new Vector2 (21, 3));
+
+		MustBeOns.Add (new Vector2 (6, 8));
+		MustBeOns.Add (new Vector2 (7, 8));
+		MustBeOns.Add (new Vector2 (10, 8));
+		MustBeOns.Add (new Vector2 (14, 8));
+		MustBeOns.Add (new Vector2 (15, 8));
+		MustBeOns.Add (new Vector2 (18, 8));
+
+		MustBeOns.Add (new Vector2 (6, 16));
+		MustBeOns.Add (new Vector2 (11, 16));
+		MustBeOns.Add (new Vector2 (16, 16));
+		MustBeOns.Add (new Vector2 (20, 16));
+
+		MustBeOns.Add (new Vector2 (3, 21));
+		MustBeOns.Add (new Vector2 (4, 21));
+		MustBeOns.Add (new Vector2 (9, 21));
+		MustBeOns.Add (new Vector2 (10, 21));
+		MustBeOns.Add (new Vector2 (15, 21));
+		MustBeOns.Add (new Vector2 (20, 21));
+		MustBeOns.Add (new Vector2 (21, 21));
 
 		foreach (Vector2 MustBeOn in MustBeOns) {
 			if (MustBeOn == new Vector2 (x, y))
@@ -310,9 +334,11 @@ public class Solver : MonoBehaviour {
 			StartLists.Add( NewList );
 
 			AddUniqueRowMask( RowMasks, RowMask );
-
-			//break;
 		}
+
+		if (RowMasks.Count == 0)
+			Debug.LogError ( (IsRowNotCol ? "row":"col" ) + " " + RowIndex + " generated 0 row masks");
+
 		return RowMasks;
 	}
 
@@ -337,12 +363,6 @@ public class Solver : MonoBehaviour {
 		
 	void GenerateTexture(Texture2D Tex,List<List<int>> RowMasksPerRow,int RenderIteration)
 	{
-		//	clear texture
-		for (int y=0; y<Tex.height; y++)
-			for (int x=0; x<Tex.width; x++)
-				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
-
-
 		int RunningTotal = 1;
 
 		//	generate an iteration and render it
@@ -354,7 +374,9 @@ public class Solver : MonoBehaviour {
 			//	error, didn't generate any combos
 			if ( RowMatches == 0 )
 				continue;
-						
+			//if ( RowMatches > 1 )
+			//	continue;
+
 			int RenderRowIteration = (RenderIteration / RunningTotal) % RowMatches;
 			RunningTotal *= RowMatches;
 
@@ -461,6 +483,16 @@ public class Solver : MonoBehaviour {
 		Tex.Apply ();
 	}
 
+	void ClearTexture(Texture2D Tex)
+	{
+		//	clear texture
+		for (int y=0; y<Tex.height; y++)
+			for (int x=0; x<Tex.width; x++)
+				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
+		Tex.Apply ();
+	}
+
+
 	void Iteration () {
 		
 		//int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
@@ -472,9 +504,13 @@ public class Solver : MonoBehaviour {
 		int RowIteration = mIteration;
 		int ColIteration = mIteration;
 
+		ClearTexture (mTextureRows);
+		ClearTexture (mTextureCols);
+		ClearTexture (mTextureMerged);
+	
 
 		GenerateTexture (mTextureRows, mRowMasksPerRow, RowIteration );
-		GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
+	//	GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
 		/*
 
 		//	generate the masks for this iteration
