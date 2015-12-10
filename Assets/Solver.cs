@@ -95,8 +95,8 @@ public class Solver : MonoBehaviour {
 
 
 
-		mRowMasksPerRow = GenerateRowMasks (mRows);
-		mRowMasksPerCol = GenerateRowMasks (mCols);
+		mRowMasksPerRow = GenerateRowMasks (mRows, true);
+		mRowMasksPerCol = GenerateRowMasks (mCols, false);
 		mTotalTotal = 0;
 		for ( int a=0;	a<mRowMasksPerRow.Count;	a++ )
 			for ( int b=0;	b<mRowMasksPerRow[a].Count;	b++ )
@@ -217,8 +217,42 @@ public class Solver : MonoBehaviour {
 		return true;
 	}
 
+	bool ValidateCoord(int x, int y, bool IsOn )
+	{
+		if (IsOn)
+			return true;
 
-	List<int> GenerateRowMasks(RowMeta Row,int RowIndex)
+		//	check for ones which are OFF which NEED to be ON
+		List<Vector2> MustBeOns = new List<Vector2> ();
+		MustBeOns.Add (new Vector2 (3, 3));
+
+		foreach (Vector2 MustBeOn in MustBeOns) {
+			if (MustBeOn == new Vector2 (x, y))
+			{
+				Debug.LogWarning("Coord is missing: " + x + ","+ y);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+
+	bool ValidateRowMask(int RowMask,int RowIndex,bool IsRowNotColumn)
+	{
+		for (int i=0; i<mRowWidth; i++) {
+			int y = IsRowNotColumn ? RowIndex : i;
+			int x = IsRowNotColumn ? i : RowIndex;
+			bool IsOn = (RowMask & (1 << i)) != 0;
+
+			if ( !ValidateCoord( x, y, IsOn ) )
+				return false;
+		}
+		return true;
+	}
+
+
+	List<int> GenerateRowMasks(RowMeta Row,int RowIndex,bool IsRowNotCol)
 	{
 		List<int> RowMasks = new List<int>();
 
@@ -265,10 +299,16 @@ public class Solver : MonoBehaviour {
 				continue;
 			}
 
+			int RowMask = GenerateRowMask( Row, Starts );
+			if ( !ValidateRowMask( RowMask, RowIndex, IsRowNotCol ) )
+			{
+				CurrentIndex++;
+				continue;
+			}
+
 			//	valid, save
 			StartLists.Add( NewList );
 
-			int RowMask = GenerateRowMask( Row, Starts );
 			AddUniqueRowMask( RowMasks, RowMask );
 
 			//break;
@@ -303,34 +343,29 @@ public class Solver : MonoBehaviour {
 				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
 
 
-		int RunningTotal = 0;
+		int RunningTotal = 1;
 
 		//	generate an iteration and render it
 		for (int r=0; r<RowMasksPerRow.Count; r++) {
 			List<int> RowMasks = RowMasksPerRow[r];
-			
+
+			int RowMatches = RowMasks.Count;
 			//Debug.Log("Row " + r + " generated " + RowMasks.Count );
 			//	error, didn't generate any combos
-			if ( RowMasks.Count == 0 )
+			if ( RowMatches == 0 )
 				continue;
-
-
-			
-			RunningTotal += RowMasks.Count;
-			int RenderRowIteration = (RenderIteration / ((RunningTotal==0)?1:RunningTotal)) % RowMasks.Count;
-
-			/*
-			int RenderRowIteration = (RenderIteration / ((RunningTotal==0)?1:RunningTotal)) % RowMasks.Count;
-			RunningTotal += RowMasks.Count;
-
-*/
+						
+			int RenderRowIteration = (RenderIteration / RunningTotal) % RowMatches;
+			RunningTotal *= RowMatches;
 
 			//	pick a combo and render it
 			//int RenderRowIteration = RenderIteration % RunningTotal;
+			//RenderRowIteration = RowMatches-1;
 			RenderRowMask( RowMasks[RenderRowIteration], r, Tex );
-
 		
 		}
+
+		Debug.Log ("Running total: " + RunningTotal);
 		
 		Tex.Apply ();
 	}
@@ -350,13 +385,13 @@ public class Solver : MonoBehaviour {
 		Tex.Apply ();
 	}
 
-	List<List<int>> GenerateRowMasks(List<RowMeta> Rows)
+	List<List<int>> GenerateRowMasks(List<RowMeta> Rows,bool IsRowNotCol)
 	{
 		List<List<int>> RowsMasksPerRow = new List<List<int>> ();
 
 		//	generate an iteration and render it
 		for (int r=0; r<Rows.Count; r++) {
-			List<int> RowMasks = GenerateRowMasks (Rows [r], r);
+			List<int> RowMasks = GenerateRowMasks (Rows [r], r, IsRowNotCol);
 
 			RowsMasksPerRow.Add( RowMasks );
 		}
@@ -366,7 +401,7 @@ public class Solver : MonoBehaviour {
 	List<int> GetRowMaskItertion(List<List<int>> RowMasksPerRow,int Iteration)
 	{
 		List<int> Output = new List<int> ();
-		int RunningTotal = 0;
+		int RunningTotal = 1;
 
 		int LocalTotal = GetRowMasksPerRowTotal (RowMasksPerRow);
 		Debug.Log(Iteration + "/" + LocalTotal);
@@ -377,11 +412,10 @@ public class Solver : MonoBehaviour {
 
 
 			int LocalIt = Iteration;
-			if ( RunningTotal > 0 )
-				LocalIt /= RunningTotal;
+			LocalIt /= RunningTotal;
 
 			int RenderRowIteration = LocalIt % RowMasks.Count;
-			RunningTotal += RowMasks.Count;
+			RunningTotal *= RowMasks.Count;
 
 			Output.Add( RowMasks[RenderRowIteration] );
 		}
@@ -429,16 +463,19 @@ public class Solver : MonoBehaviour {
 
 	void Iteration () {
 		
-		int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
-		
+		//int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
+		int RowLocalTotalCombos = mTotalTotal;
 		//int RowIteration = mIteration ;
-		int RowIteration = mIteration % RowLocalTotalCombos;
-		int ColIteration = mIteration / RowLocalTotalCombos;
+		//int RowIteration = mIteration % RowLocalTotalCombos;
+		//int ColIteration = mIteration / RowLocalTotalCombos;
 
-		/*
+		int RowIteration = mIteration;
+		int ColIteration = mIteration;
+
+
 		GenerateTexture (mTextureRows, mRowMasksPerRow, RowIteration );
 		GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
-		*/
+		/*
 
 		//	generate the masks for this iteration
 		List<int> RowRowMasks = GetRowMaskItertion (mRowMasksPerRow, RowIteration);
@@ -448,6 +485,7 @@ public class Solver : MonoBehaviour {
 
 
 		GenerateMergedTexture (mTextureMerged, RowRowMasks, ColRowMasks);
+		*/
 	}
 
 
