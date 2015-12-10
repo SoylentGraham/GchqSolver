@@ -23,10 +23,11 @@ public class Solver : MonoBehaviour {
 	List<RowMeta>		mRows = new List<RowMeta>();
 	List<RowMeta>		mCols = new List<RowMeta>();
 	int					mRowWidth = 25;
+	public bool			mPreviewIteration = true;
 
-	[Range(0,1000)]
+	[Range(0,100)]
 	public int			mIterationsPerLoop = 1;
-	[Range(0,91000)]
+	[Range(0,200)]
 	public int			mIteration = 0;
 
 	List<List<int>>		mRowMasksPerRow;
@@ -383,6 +384,9 @@ public class Solver : MonoBehaviour {
 			//	pick a combo and render it
 			//int RenderRowIteration = RenderIteration % RunningTotal;
 			//RenderRowIteration = RowMatches-1;
+
+			if ( mPreviewIteration )
+				RenderRowIteration = Mathf.Min (RowMasks.Count-1,RenderIteration);
 			RenderRowMask( RowMasks[RenderRowIteration], r, Tex );
 		
 		}
