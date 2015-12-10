@@ -26,7 +26,7 @@ public class Solver : MonoBehaviour {
 
 	[Range(0,1000)]
 	public int			mIterationsPerLoop = 1;
-	[Range(0,31000)]
+	[Range(0,91000)]
 	public int			mIteration = 0;
 
 	List<List<int>>		mRowMasksPerRow;
@@ -313,16 +313,23 @@ public class Solver : MonoBehaviour {
 			//	error, didn't generate any combos
 			if ( RowMasks.Count == 0 )
 				continue;
+
+
 			
-			//RunningTotal += RowMasks.Count;
+			RunningTotal += RowMasks.Count;
 			int RenderRowIteration = (RenderIteration / ((RunningTotal==0)?1:RunningTotal)) % RowMasks.Count;
-			
+
+			/*
+			int RenderRowIteration = (RenderIteration / ((RunningTotal==0)?1:RunningTotal)) % RowMasks.Count;
+			RunningTotal += RowMasks.Count;
+
+*/
+
 			//	pick a combo and render it
 			//int RenderRowIteration = RenderIteration % RunningTotal;
 			RenderRowMask( RowMasks[RenderRowIteration], r, Tex );
 
-			RunningTotal += RowMasks.Count;
-			//RunningTotal /= RowMasks.Count;
+		
 		}
 		
 		Tex.Apply ();
@@ -360,14 +367,21 @@ public class Solver : MonoBehaviour {
 	{
 		List<int> Output = new List<int> ();
 		int RunningTotal = 0;
-		
+
+		int LocalTotal = GetRowMasksPerRowTotal (RowMasksPerRow);
+		Debug.Log(Iteration + "/" + LocalTotal);
+
 		//	generate an iteration and render it
 		for (int r=0; r<RowMasksPerRow.Count; r++) {
 			List<int> RowMasks = RowMasksPerRow[r];
-			
-			//RunningTotal += RowMasks.Count;
+
+
+			int LocalIt = Iteration;
+			if ( RunningTotal > 0 )
+				LocalIt /= RunningTotal;
+
+			int RenderRowIteration = LocalIt % RowMasks.Count;
 			RunningTotal += RowMasks.Count;
-			int RenderRowIteration = (Iteration / RunningTotal) % RowMasks.Count;
 
 			Output.Add( RowMasks[RenderRowIteration] );
 		}
@@ -417,6 +431,7 @@ public class Solver : MonoBehaviour {
 		
 		int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
 		
+		//int RowIteration = mIteration ;
 		int RowIteration = mIteration % RowLocalTotalCombos;
 		int ColIteration = mIteration / RowLocalTotalCombos;
 
