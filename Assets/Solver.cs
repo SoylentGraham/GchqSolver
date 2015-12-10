@@ -302,21 +302,27 @@ public class Solver : MonoBehaviour {
 		for (int y=0; y<Tex.height; y++)
 			for (int x=0; x<Tex.width; x++)
 				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
-		
+
+
+		int RunningTotal = 0;
+
 		//	generate an iteration and render it
 		for (int r=0; r<RowMasksPerRow.Count; r++) {
 			List<int> RowMasks = RowMasksPerRow[r];
 			
 			//Debug.Log("Row " + r + " generated " + RowMasks.Count );
-			
-			
 			//	error, didn't generate any combos
 			if ( RowMasks.Count == 0 )
 				continue;
 			
+			RunningTotal += RowMasks.Count;
+			int RenderRowIteration = (RenderIteration / RunningTotal) % RowMasks.Count;
+			
 			//	pick a combo and render it
-			int RenderRowIteration = Mathf.Min( RenderIteration, RowMasks.Count-1);
+			//int RenderRowIteration = RenderIteration % RunningTotal;
 			RenderRowMask( RowMasks[RenderRowIteration], r, Tex );
+
+			//RunningTotal /= RowMasks.Count;
 		}
 		
 		Tex.Apply ();
