@@ -24,6 +24,8 @@ public class Solver : MonoBehaviour {
 	int 				mIteration = 0;
 
 	void Start () {
+
+		//	http://www.bbc.co.uk/news/uk-35058761
 	
 
 		mRows.Add( new RowMeta( new int[]{ 7, 3, 1, 1, 7 } ) );
@@ -165,8 +167,34 @@ public class Solver : MonoBehaviour {
 		return true;
 	}
 
+	bool ValidateRow(int[] Starts,RowMeta Row,int RowIndex)
+	{
+		//	todo: validate against known columns
+		//	todo: validate against provided grids
+		//	todo: move overflow check here?
 
-	List<int> GenerateRowMasks(RowMeta Row)
+		//	validate no overlaps (easier than re-organising the generations
+		for (int b=0; b<Starts.Length; b++) {
+			int Start = Starts [b];
+			int End = Starts [b] + Row.mBlockLengths [b] + 1; //	+1 for white gap
+
+			bool Overlap = false;
+
+			//	our end should always be <= to anything that follows us
+			for (int c=b+1; c<Starts.Length; c++) {
+				if ( Starts[c] < End )
+					Overlap = true;
+			}
+
+			if ( Overlap )
+				return false;
+		}
+
+		return true;
+	}
+
+
+	List<int> GenerateRowMasks(RowMeta Row,int RowIndex)
 	{
 		List<int> RowMasks = new List<int>();
 
@@ -200,6 +228,14 @@ public class Solver : MonoBehaviour {
 
 			//	failed, skip and go to next index
 			if ( Starts == null )
+			{
+				CurrentIndex++;
+				continue;
+			}
+
+			//	validate row
+			//	gr: if this fails we've moved along too far too?
+			if ( !ValidateRow( Starts, Row, RowIndex ) )
 			{
 				CurrentIndex++;
 				continue;
@@ -240,7 +276,7 @@ public class Solver : MonoBehaviour {
 
 		//	generate an iteration and render it
 		for (int r=0; r<mRows.Count; r++) {
-			List<int> RowMasks = GenerateRowMasks (mRows [r]);
+			List<int> RowMasks = GenerateRowMasks (mRows [r], r);
 
 			Debug.Log("Row " + r + " generated " + RowMasks.Count );
 
