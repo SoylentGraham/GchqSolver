@@ -297,10 +297,6 @@ public class Solver : MonoBehaviour {
 		
 	void GenerateTexture(Texture2D Tex,List<List<int>> RowMasksPerRow,int RenderIteration)
 	{
-		//	
-		int LocalTotal = GetRowMasksPerRowTotal (RowMasksPerRow);
-		//Debug.Log (RenderIteration + "/" + LocalTotal);
-
 		//	clear texture
 		for (int y=0; y<Tex.height; y++)
 			for (int x=0; x<Tex.width; x++)
@@ -318,14 +314,30 @@ public class Solver : MonoBehaviour {
 			if ( RowMasks.Count == 0 )
 				continue;
 			
-			RunningTotal += RowMasks.Count;
-			int RenderRowIteration = (RenderIteration / RunningTotal) % RowMasks.Count;
+			//RunningTotal += RowMasks.Count;
+			int RenderRowIteration = (RenderIteration / ((RunningTotal==0)?1:RunningTotal)) % RowMasks.Count;
 			
 			//	pick a combo and render it
 			//int RenderRowIteration = RenderIteration % RunningTotal;
 			RenderRowMask( RowMasks[RenderRowIteration], r, Tex );
 
+			RunningTotal += RowMasks.Count;
 			//RunningTotal /= RowMasks.Count;
+		}
+		
+		Tex.Apply ();
+	}
+
+	void GenerateTexture(Texture2D Tex,List<int> RowMasks)
+	{
+		//	clear texture
+		for (int y=0; y<Tex.height; y++)
+			for (int x=0; x<Tex.width; x++)
+				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
+		
+		for (int r=0; r<RowMasks.Count; r++) {
+			int RowMask = RowMasks[r];
+			RenderRowMask( RowMask, r, Tex );
 		}
 		
 		Tex.Apply ();
@@ -344,21 +356,86 @@ public class Solver : MonoBehaviour {
 		return RowsMasksPerRow;
 	}
 
+	List<int> GetRowMaskItertion(List<List<int>> RowMasksPerRow,int Iteration)
+	{
+		List<int> Output = new List<int> ();
+		int RunningTotal = 0;
+		
+		//	generate an iteration and render it
+		for (int r=0; r<RowMasksPerRow.Count; r++) {
+			List<int> RowMasks = RowMasksPerRow[r];
+			
+			//RunningTotal += RowMasks.Count;
+			RunningTotal += RowMasks.Count;
+			int RenderRowIteration = (Iteration / RunningTotal) % RowMasks.Count;
+
+			Output.Add( RowMasks[RenderRowIteration] );
+		}
+
+		return Output;
+	}
+
+	void GenerateMergedTexture(Texture2D Tex,List<int> RowRowMasks,List<int> ColRowMasks)
+	{
+		//	clear texture
+		for (int y=0; y<Tex.height; y++)
+			for (int x=0; x<Tex.width; x++)
+				Tex.SetPixel (x, y, new Color (x / (float)Tex.width, y / (float)Tex.height, 0));
+
+		int GoodCount = 0;
+
+		for (int i=0; i<RowRowMasks.Count*ColRowMasks.Count;	i++)
+		{
+			int x = i % RowRowMasks.Count;
+			int y = i / RowRowMasks.Count;
+
+			//	get col value
+			bool ColOn = (ColRowMasks[x] & (1<<y))!=0;
+			bool RowOn = (RowRowMasks[y] & (1<<x))!=0;
+			bool Goodxy = ColOn == RowOn;
+			Color Colour = new Color32( 0, 0, 0, 255 );
+
+			Colour.r = ColOn ? 255 : 0;
+			Colour.g = RowOn ? 255 : 0;
+			Colour.b = Goodxy ? 255 : 0;
+
+			Tex.SetPixel( x,y, Colour );
+
+			if ( Goodxy )
+				GoodCount ++;
+		}
+
+		float GoodCountf = GoodCount / (float)(RowRowMasks.Count * ColRowMasks.Count);
+		if (GoodCountf > 0.80f) {
+			Debug.LogWarning ("Solved: " + (GoodCountf * 100.0f) + "%");
+		}
+
+		Tex.Apply ();
+	}
+
 	void Iteration () {
 		
-		//if (mIteration > 0)
-		//	return;
-
 		int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
 		
-		int RowIteration = mIteration / RowLocalTotalCombos;
-		int ColIteration = mIteration % RowLocalTotalCombos;
-		
+		int RowIteration = mIteration % RowLocalTotalCombos;
+		int ColIteration = mIteration / RowLocalTotalCombos;
+
+		/*
 		GenerateTexture (mTextureRows, mRowMasksPerRow, RowIteration );
 		GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
-		
-		
+		*/
+
+		//	generate the masks for this iteration
+		List<int> RowRowMasks = GetRowMaskItertion (mRowMasksPerRow, RowIteration);
+		List<int> ColRowMasks = GetRowMaskItertion (mRowMasksPerCol, ColIteration);
+		GenerateTexture (mTextureRows, RowRowMasks);
+		GenerateTexture (mTextureCols, ColRowMasks);
+
+
+		GenerateMergedTexture (mTextureMerged, RowRowMasks, ColRowMasks);
 	}
+
+
 
 	void Update () {
 
