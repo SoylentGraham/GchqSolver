@@ -23,8 +23,11 @@ public class Solver : MonoBehaviour {
 	List<RowMeta>		mRows = new List<RowMeta>();
 	List<RowMeta>		mCols = new List<RowMeta>();
 	int					mRowWidth = 25;
-	int 				mIteration = 0;
 
+	[Range(0,1000)]
+	public int			mIterationsPerLoop = 1;
+	[Range(0,31000)]
+	public int			mIteration = 0;
 
 	List<List<int>>		mRowMasksPerRow;
 	List<List<int>>		mRowMasksPerCol;
@@ -296,7 +299,7 @@ public class Solver : MonoBehaviour {
 	{
 		//	
 		int LocalTotal = GetRowMasksPerRowTotal (RowMasksPerRow);
-		Debug.Log (RenderIteration + "/" + LocalTotal);
+		//Debug.Log (RenderIteration + "/" + LocalTotal);
 
 		//	clear texture
 		for (int y=0; y<Tex.height; y++)
@@ -341,25 +344,35 @@ public class Solver : MonoBehaviour {
 		return RowsMasksPerRow;
 	}
 
+	void Iteration () {
+		
+		//if (mIteration > 0)
+		//	return;
 
+		int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
+		
+		int RowIteration = mIteration / RowLocalTotalCombos;
+		int ColIteration = mIteration % RowLocalTotalCombos;
+		
+		GenerateTexture (mTextureRows, mRowMasksPerRow, RowIteration );
+		GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
+		
+		
+	}
 
 	void Update () {
 
-		//if (mIteration > 0)
-		//	return;
-		mIteration++;
-	
-		int RowLocalTotalCombos = GetRowMasksPerRowTotal (mRowMasksPerRow);
+		int ItCount = mIterationsPerLoop - (Random.Range (0, mIterationsPerLoop / 2));
+		for (int x=0; x<mIterationsPerLoop; x++) {
+			mIteration++;
+			//mIteration = mIteration % mTotalTotal;
+			Iteration ();
+		}
 
-		mIteration = mIteration % mTotalTotal;
-
-		int RowIteration = mIteration / RowLocalTotalCombos;
-		int ColIteration = mIteration % RowLocalTotalCombos;
-
-		GenerateTexture (mTextureRows, mRowMasksPerRow, RowIteration );
-		GenerateTexture (mTextureCols, mRowMasksPerCol, ColIteration );
-
-
+		if (mIterationsPerLoop == 0)
+			Iteration ();
 	}
+
+
 
 }
